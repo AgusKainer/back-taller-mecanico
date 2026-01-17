@@ -16,5 +16,9 @@ app.use(verificarToken);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/autos", autosRoutes);
+app.get("/", (req, res) => {
+  res.send("Backend del taller mecánico funcionando correctamente 🚗🔧");
+});
+
 
 module.exports = app;
