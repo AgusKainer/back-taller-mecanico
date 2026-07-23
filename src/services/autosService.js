@@ -1,7 +1,7 @@
 const autoModel = require("../models/autoModel");
 
-async function getAll(companyId) {
-  return await autoModel.findAll(companyId);
+async function getAll(companyId, options = {}) {
+  return await autoModel.findAll(companyId, options);
 }
 
 async function getByPatente(patente, companyId) {
