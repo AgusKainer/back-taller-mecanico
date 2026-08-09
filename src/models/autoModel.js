@@ -1,5 +1,5 @@
 const { sequelize, Sequelize } = require("../db");
-const { DataTypes } = Sequelize;
+const { DataTypes, Op } = Sequelize;
 
 const Auto =
   sequelize.models.Auto ||
@@ -37,9 +37,12 @@ async function createAuto({
   proximoMantenimiento,
   companyId,
 }) {
+  const normalizedPatente = String(patente || "")
+    .trim()
+    .toUpperCase();
   console.log(
     "que llega para crear: ",
-    patente,
+    normalizedPatente,
     dueño,
     marca,
     modelo,
@@ -49,7 +52,7 @@ async function createAuto({
   );
   if (!companyId) throw new Error("companyId requerido");
   const auto = await Auto.create({
-    patente,
+    patente: normalizedPatente,
     dueño,
     correo,
     marca,
@@ -99,7 +102,12 @@ async function findAll(companyId, options = {}) {
 }
 
 async function findByPatente(patente, companyId) {
-  const where = companyId ? { patente, companyId } : { patente };
+  const normalizedPatente = String(patente || "")
+    .trim()
+    .toUpperCase();
+  const where = companyId
+    ? { patente: { [Op.iLike]: normalizedPatente }, companyId }
+    : { patente: { [Op.iLike]: normalizedPatente } };
   const a = await Auto.findOne({ where });
   return a ? a.toJSON() : null;
 }
@@ -135,6 +143,9 @@ async function updateById(id, cambios, companyId) {
   if (companyId) where.companyId = companyId;
   const auto = await Auto.findOne({ where });
   if (!auto) return null;
+  if (cambios.patente) {
+    cambios.patente = String(cambios.patente).trim().toUpperCase();
+  }
   await auto.update(cambios);
   return auto.toJSON();
 }
@@ -148,24 +159,27 @@ async function updateMaintenance(id, { kmActuales, reparacion }, companyId) {
   if (kmActuales !== undefined) cambios.kmActuales = kmActuales;
   if (reparacion !== undefined) {
     const timestamp = new Date().toISOString();
-    const nuevaEntrada = `[${timestamp}] ${reparacion}`;
+    const kmTag = Number.isFinite(kmActuales) ? ` (${kmActuales} km)` : "";
+    const nuevaEntrada = `[${timestamp}]${kmTag} ${reparacion}`;
     cambios.descripcionUltimaReparacion = auto.descripcionUltimaReparacion
       ? `${auto.descripcionUltimaReparacion}\n\n${nuevaEntrada}`
       : nuevaEntrada;
   }
   cambios.fechaUltimaReparacion = new Date();
-  await auto.update(cambios);
-  if (auto.kmActuales && !auto.proximoMantenimiento) {
-    await auto.update({ proximoMantenimiento: auto.kmActuales + 5000 });
+
+  let updatedAuto = await auto.update(cambios);
+  const currentKm = Number.isFinite(updatedAuto.kmActuales)
+    ? updatedAuto.kmActuales
+    : null;
+  const currentNext = updatedAuto.proximoMantenimiento;
+
+  if (currentKm !== null && (!currentNext || currentKm >= currentNext)) {
+    updatedAuto = await updatedAuto.update({
+      proximoMantenimiento: currentKm + 5000,
+    });
   }
-  if (
-    auto.kmActuales &&
-    auto.proximoMantenimiento &&
-    auto.kmActuales >= auto.proximoMantenimiento
-  ) {
-    await auto.update({ proximoMantenimiento: auto.kmActuales + 5000 });
-  }
-  return auto.toJSON();
+
+  return updatedAuto.toJSON();
 }
 
 async function deleteById(id, companyId) {

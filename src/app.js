@@ -20,5 +20,4 @@ app.get("/", (req, res) => {
   res.send("Backend del taller mecánico funcionando correctamente 🚗🔧");
 });
 
-
 module.exports = app;
