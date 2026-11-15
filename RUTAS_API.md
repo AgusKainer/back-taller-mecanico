@@ -73,6 +73,9 @@ Response: 200
 
 ### Obtener auto por PATENTE (cliente busca su historial)
 
+La búsqueda no depende del taller del usuario autenticado: encuentra la patente
+entre todos los talleres. El resto de las operaciones mantiene su aislamiento por taller.
+
 ```
 GET /api/autos/patente/ABC-123
 Response: 200

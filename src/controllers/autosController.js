@@ -10,8 +10,7 @@ async function getAll(req, res) {
 
 async function getByPatente(req, res) {
   const { patente } = req.params;
-  const companyId = req.user && req.user.companyId;
-  const auto = await autosService.getByPatente(patente, companyId);
+  const auto = await autosService.getByPatente(patente);
   if (!auto) return res.status(404).json({ error: "Auto no encontrado" });
   return res.json(auto);
 }
